@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DopplerVibes - supernova26</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .navbar {
+            background-color: black;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        ul {
+            margin-left: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Courier New', monospace;
+        }
+        .toggle-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .toggle-btn:hover {
+            background-color: #2980b9;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">supernova26 - tecnologia médica</nav>
+    <div class="container">
+        <h1>DopplerVibes</h1>
+
+        <h2>Ideia</h2>
+        <p>Um dispositivo que recebe entradas de uma máquina de ultrassom Doppler capturando batimentos cardíacos fetais, transforma o áudio em vibrações que podem ser sentidas com as mãos, direcionado a gestantes com deficiências auditivas. Este projeto visa promover inclusão e acessibilidade, permitindo que mães com deficiência auditiva experimentem a alegria de sentir os batimentos cardíacos do bebê, algo que normalmente é ouvido. A ideia é inovadora, combinando tecnologias de ultrassom, processamento de sinais digitais e feedback háptico para criar uma experiência tátil imersiva.</p>
+
+        <h2>Plano Geral</h2>
+        <ul>
+            <li>Pesquisar como capturar entrada de áudio de dispositivos Doppler de ultrassom: priorizar jack de 3.5mm (áudio analógico), considerar Bluetooth para sem fio, evitar API para protótipo inicial.</li>
+            <li>Implementar análise de áudio: usar filtro passa-banda para isolar frequências de batimentos cardíacos fetais (120-160 bpm), aplicar detecção de picos para extração de ritmo, pesquisar bibliotecas DSP para ESP32.</li>
+            <li>Projetar sistema háptico: usar atuador LRA com driver DRV2605 para pulsos precisos, conectar via I2C ao ESP32.</li>
+            <li>Prototipar formato do dispositivo: criar almofada ou luva wearable com case impresso em 3D, materiais macios, bateria LiPo para portabilidade.</li>
+            <li>Garantir segurança e aprovações: classificar como dispositivo de bem-estar para simplificar processo ANVISA, validar ausência de interferência no Doppler.</li>
+            <li>Construir prova de conceito: usar ESP32, simular áudio Doppler de vídeos YouTube, integrar entrada ADC, filtragem, detecção de picos e saída háptica.</li>
+        </ul>
+
+        <h2>Sugestões Detalhadas de Desenvolvimento</h2>
+
+        <h3>1. Captura de Áudio do Doppler</h3>
+        <p>A captura de áudio é o ponto de entrada do sistema. Os dispositivos Doppler fetais emitem um sinal de áudio através de um alto-falante ou saída de fone de ouvido. Para capturar esse sinal, precisamos de uma interface que converta o áudio analógico em dados digitais processáveis.</p>
+
+        <h4>Opções de Captura</h4>
+        <ul>
+            <li><strong>Jack de Áudio de 3.5mm (Recomendado para Protótipo Inicial)</strong>: A maioria dos Dopplers domésticos possui uma saída padrão de fone de ouvido. Este sinal é analógico e pode ser conectado diretamente a um conversor analógico-digital (ADC). Vantagens: Simples, confiável e não requer pareamento. Desvantagens: Cabo físico limita a mobilidade.</li>
+            <li><strong>Bluetooth</strong>: Alguns modelos modernos suportam transmissão sem fio. Isso permitiria um dispositivo totalmente portátil. Vantagens: Sem cabos, maior conforto. Desvantagens: Adiciona complexidade de pareamento, latência potencial e consumo de energia.</li>
+            <li><strong>API Direta</strong>: Rara em dispositivos de consumo; mais comum em equipamentos hospitalares. Não é viável para protótipos iniciais devido à necessidade de integração com sistemas proprietários.</li>
+        </ul>
+
+        <h4>Hardware Sugerido</h4>
+        <p>Para implementar a captura, recomendamos o ESP32 como microcontrolador principal. O ESP32 possui:</p>
+        <ul>
+            <li>ADCs internos de 12 bits para leitura de sinais analógicos.</li>
+            <li>Suporte a Bluetooth 4.2/5.0 para futuras expansões.</li>
+            <li>Wi-Fi para possíveis atualizações over-the-air (OTA).</li>
+            <li>Processamento suficiente para DSP básico.</li>
+        </ul>
+        <p>Alternativas: Raspberry Pi Pico (mais barato, mas sem Bluetooth integrado) ou Arduino Nano 33 BLE (sem Wi-Fi).</p>
+
+        <h4>Implementação</h4>
+        <p>Conecte a saída do Doppler ao pino ADC do ESP32 (ex: GPIO 34). Use uma resistência pull-down para estabilizar o sinal. No código, configure o ADC com resolução máxima e taxa de amostragem de pelo menos 8kHz para capturar frequências de áudio relevantes.</p>
+        <p>Exemplo de código básico em Arduino IDE:</p>
+        <pre><code>#define AUDIO_PIN 34
+void setup() {
+  Serial.begin(115200);
+  analogReadResolution(12);
+}
+void loop() {
+  int audioSample = analogRead(AUDIO_PIN);
+  // Processar amostra
+}</code></pre>
+        <p>Desafios: Ruído elétrico pode interferir; use capacitores de desacoplamento. Teste com diferentes Dopplers para compatibilidade.</p>
+
+        <h3>2. Análise do Áudio e Extração do Ritmo</h3>
+        <p>Esta é a etapa mais crítica e técnica. O áudio Doppler não é um tom puro, mas um "whoosh" rítmico causado pelo efeito Doppler nos batimentos cardíacos. Precisamos extrair o ritmo (BPM) em tempo real.</p>
+
+        <h4>Processamento de Sinais Digitais (DSP)</h4>
+        <ul>
+            <li><strong>Filtragem Passa-Banda</strong>: Aplique um filtro para isolar frequências entre 1-5 Hz (para ritmo) e remover ruídos de fundo. Use um filtro Butterworth ou FIR implementado via biblioteca.</li>
+            <li><strong>Detecção de Picos</strong>: Identifique os pontos altos de cada "whoosh". Algoritmos como o de Scharr ou detecção baseada em threshold podem ser usados.</li>
+            <li><strong>Cálculo de BPM</strong>: Meça intervalos entre picos consecutivos. Use uma média móvel para suavizar variações.</li>
+        </ul>
+
+        <h4>Bibliotecas e Ferramentas</h4>
+        <p>Pesquise bibliotecas como:</p>
+        <ul>
+            <li>ArduinoFFT para transformada de Fourier rápida (FFT) em ESP32.</li>
+            <li>Filtros DSP em C++ puro para eficiência.</li>
+            <li>Exemplos de projetos similares: Monitores cardíacos DIY ou detectores de batidas musicais.</li>
+        </ul>
+
+        <p>Implementação passo a passo:</p>
+        <ol>
+            <li>Amostrar o áudio a 8kHz.</li>
+            <li>Aplicar filtro passa-banda.</li>
+            <li>Detectar picos usando derivada ou comparação com threshold dinâmico.</li>
+            <li>Calcular BPM: bpm = 60 / (tempo_entre_picos).</li>
+        </ol>
+
+        <p>Código exemplo:</p>
+        <pre><code>// Usando ArduinoFFT
+#include &lt;arduinoFFT.h&gt;
+arduinoFFT FFT = arduinoFFT();
+double vReal[SAMPLES], vImag[SAMPLES];
+// ... amostragem
+FFT.Windowing(vReal, SAMPLES, FFT_WIN_TYP_HAMMING, FFT_FORWARD);
+FFT.Compute(vReal, vImag, SAMPLES, FFT_FORWARD);
+FFT.ComplexToMagnitude(vReal, vImag, SAMPLES);
+// Analisar magnitudes para frequências de interesse</code></pre>
+
+        <p>Desafios: Variações no volume do Doppler podem afetar a detecção. Implemente calibração automática. Teste com gravações reais de batimentos fetais.</p>
+
+        <h3>3. Sistema de Feedback Tátil (Háptico)</h3>
+        <p>Traduzir o ritmo extraído em sensações táteis. O objetivo é simular batimentos cardíacos palpáveis.</p>
+
+        <h4>Componentes Hápticos</h4>
+        <ul>
+            <li><strong>Atuador Linear Ressonante (LRA)</strong>: Superior a motores ERM para precisão. Responde a frequências específicas, ideal para pulsos curtos.</li>
+            <li><strong>Driver DRV2605</strong>: Controla o LRA via I2C. Suporta bibliotecas de efeitos pré-programados (ex: pulsos, vibrações).</li>
+        </ul>
+
+        <h4>Implementação</h4>
+        <p>Conecte o DRV2605 ao ESP32 via I2C (pinos SDA/SCL). Configure efeitos de vibração sincronizados com os picos detectados.</p>
+        <p>Código exemplo:</p>
+        <pre><code>#include &lt;Wire.h&gt;
+#include &lt;DRV2605.h&gt;
+DRV2605 haptic;
+void setup() {
+  haptic.begin();
+  haptic.setMode(DRV2605_MODE_INTTRIG);
+}
+void loop() {
+  if (peakDetected) {
+    haptic.setWaveform(0, 47); // Efeito de pulso
+    haptic.go();
+  }
+}</code></pre>
+        <p>Desafios: Latência deve ser mínima (&lt;100ms) para realismo. Teste intensidade para conforto.</p>
+
+        <h3>4. Protótipo e Formato do Dispositivo</h3>
+        <p>O formato deve ser ergonômico e seguro para gestantes.</p>
+
+        <h4>Design</h4>
+        <ul>
+            <li><strong>Almofada Wearable</strong>: Disco macio de 10-15cm de diâmetro, com LRA interno. Material: Silicone hipoalergênico.</li>
+            <li><strong>Luva</strong>: Integrar atuadores nas palmas para sensação direta.</li>
+        </ul>
+
+        <h4>Fabricação</h4>
+        <ul>
+            <li>Case impresso em 3D (PLA ou ABS).</li>
+            <li>Bateria LiPo 3.7V 500mAh para 2-4 horas de uso.</li>
+            <li>Botões para ligar/desligar e calibração.</li>
+        </ul>
+
+        <p>Desafios: Peso leve (&lt;100g). Teste usabilidade com usuários reais.</p>
+
+        <h3>5. Segurança e Validações</h3>
+
+        <h4>Classificação</h4>
+        <p>Como dispositivo de bem-estar, não médico, evita regulações rigorosas. Ainda assim, valide:</p>
+        <ul>
+            <li>Isolação elétrica: Bateria isolada, sem contato com pele úmida.</li>
+            <li>Não-interferência: Teste EMC com Doppler.</li>
+        </ul>
+
+        <h4>Aprovações</h4>
+        <p>Consultar ANVISA para certificação. Documentar testes de segurança.</p>
+
+        <h3>6. Prova de Conceito (PoC)</h3>
+        <p>Construa PoC usando ESP32 + DRV2605 + LRA.</p>
+        <ul>
+            <li>Simule áudio: Reproduza vídeos YouTube de Doppler em PC, conecte saída ao ESP32.</li>
+            <li>Integre: ADC -&gt; Filtragem -&gt; Detecção -&gt; Háptico.</li>
+            <li>Métricas: Precisão BPM &gt;90%, latência &lt;200ms.</li>
+        </ul>
+
+        <h4>Cronograma</h4>
+        <ul>
+            <li>Semana 1: Montar hardware básico.</li>
+            <li>Semana 2: Implementar captura e filtragem.</li>
+            <li>Semana 3: Adicionar detecção de picos e háptico.</li>
+            <li>Semana 4: Testes e refinamentos.</li>
+        </ul>
+    </div>
+
+    <script>
+        // Simple JS to toggle sections for better UX
+        document.addEventListener('DOMContentLoaded', function() {
+            const headers = document.querySelectorAll('h3');
+            headers.forEach(header => {
+                const btn = document.createElement('button');
+                btn.textContent = 'Toggle';
+                btn.className = 'toggle-btn';
+                btn.onclick = function() {
+                    const next = header.nextElementSibling;
+                    while (next && next.tagName !== 'H3') {
+                        next.classList.toggle('hidden');
+                        next = next.nextElementSibling;
+                    }
+                };
+                header.appendChild(btn);
+            });
+        });
+    </script>
+</body>
+</html>
